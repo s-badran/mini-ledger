@@ -41,6 +41,11 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 # default is the intended pattern, not a mutable-default bug.
 ignore = ["B008"]
 
+[tool.ruff.lint.isort]
+# The migrations live in ./alembic, which ruff would otherwise read as the
+# alembic package itself.
+known-third-party = ["alembic"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

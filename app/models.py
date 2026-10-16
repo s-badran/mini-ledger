@@ -49,7 +49,13 @@ class Account(Base):
     # A varchar plus check constraint instead of a native enum: adding a type
     # later is a one-line constraint change rather than an enum migration.
     type: Mapped[AccountType] = mapped_column(
-        Enum(AccountType, name="account_type", native_enum=False, length=16)
+        Enum(
+            AccountType,
+            name="ck_accounts_type",
+            native_enum=False,
+            create_constraint=True,
+            length=16,
+        )
     )
 
 
@@ -82,7 +88,15 @@ class JournalLine(Base):
     # Kept only so responses and tests see lines in the order they were posted.
     position: Mapped[int] = mapped_column()
     account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("accounts.id"), index=True)
-    side: Mapped[Side] = mapped_column(Enum(Side, name="entry_side", native_enum=False, length=8))
+    side: Mapped[Side] = mapped_column(
+        Enum(
+            Side,
+            name="ck_journal_lines_side",
+            native_enum=False,
+            create_constraint=True,
+            length=8,
+        )
+    )
     amount: Mapped[int] = mapped_column(BigInteger)
 
     entry: Mapped[JournalEntry] = relationship(back_populates="lines")
