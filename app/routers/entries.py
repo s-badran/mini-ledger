@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from sqlalchemy.orm import Session, selectinload
 
 from app.db import get_session
@@ -13,13 +13,30 @@ router = APIRouter(prefix="/entries", tags=["entries"])
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
+# 255 matches the column width; anything longer would be a client bug worth
+# rejecting rather than quietly truncating.
+IdempotencyKey = Annotated[str | None, Header(alias="Idempotency-Key", max_length=255)]
+
 
 @router.post("", response_model=EntryRead, status_code=status.HTTP_201_CREATED)
-def create_entry(payload: EntryCreate, session: SessionDep) -> JournalEntry:
+def create_entry(
+    payload: EntryCreate,
+    session: SessionDep,
+    response: Response,
+    idempotency_key: IdempotencyKey = None,
+) -> JournalEntry:
     try:
-        return ledger.post_entry(session, payload)
+        result = ledger.post_entry(session, payload, idempotency_key)
+    except ledger.IdempotencyConflict as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
     except ledger.LedgerError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
+
+    if result.replayed:
+        # The client sent a key it already used. Same entry, nothing new written.
+        response.status_code = status.HTTP_200_OK
+        response.headers["Idempotent-Replay"] = "true"
+    return result.entry
 
 
 @router.get("/{entry_id}", response_model=EntryRead)
