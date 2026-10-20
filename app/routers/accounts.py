@@ -1,14 +1,16 @@
 import uuid
+from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_session
 from app.models import Account
-from app.schemas import AccountCreate, AccountRead
+from app.schemas import AccountCreate, AccountRead, BalanceRead
+from app.services import ledger
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
@@ -42,3 +44,24 @@ def get_account(account_id: uuid.UUID, session: SessionDep) -> Account:
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no such account")
     return account
+
+
+@router.get("/{account_id}/balance", response_model=BalanceRead)
+def get_balance(
+    account_id: uuid.UUID,
+    session: SessionDep,
+    as_of: Annotated[date | None, Query(description="UTC day, inclusive")] = None,
+) -> BalanceRead:
+    account = session.get(Account, account_id)
+    if account is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no such account")
+
+    balance = ledger.account_balance(session, account, as_of)
+    return BalanceRead(
+        account_id=account.id,
+        as_of=as_of,
+        debits=balance.debits,
+        credits=balance.credits,
+        balance=balance.balance,
+        normal_side=balance.normal_side,
+    )

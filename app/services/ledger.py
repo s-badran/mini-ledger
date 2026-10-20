@@ -1,8 +1,9 @@
 import hashlib
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, date, datetime, time, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -37,6 +38,14 @@ class IdempotencyConflict(LedgerError):
 class PostingResult:
     entry: JournalEntry
     replayed: bool
+
+
+@dataclass(frozen=True)
+class Balance:
+    debits: int
+    credits: int
+    balance: int
+    normal_side: Side
 
 
 def _fingerprint(payload: EntryCreate) -> str:
@@ -124,3 +133,32 @@ def post_entry(
     session.refresh(entry)
     session.commit()
     return PostingResult(entry=entry, replayed=False)
+
+
+def _day_after(day: date) -> datetime:
+    # Balances are whole-day things. "as_of 2026-03-31" means everything that
+    # hit the ledger before 2026-04-01T00:00Z, in UTC because created_at is.
+    return datetime.combine(day + timedelta(days=1), time.min, tzinfo=UTC)
+
+
+def account_balance(session: Session, account: Account, as_of: date | None = None) -> Balance:
+    totals = (
+        select(
+            func.coalesce(func.sum(JournalLine.amount).filter(JournalLine.side == Side.debit), 0),
+            func.coalesce(func.sum(JournalLine.amount).filter(JournalLine.side == Side.credit), 0),
+        )
+        .join(JournalEntry, JournalEntry.id == JournalLine.entry_id)
+        .where(JournalLine.account_id == account.id)
+    )
+    if as_of is not None:
+        totals = totals.where(JournalEntry.created_at < _day_after(as_of))
+
+    debits, credits = session.execute(totals).one()
+    normal = account.type.normal_side
+    signed = int(debits) - int(credits) if normal is Side.debit else int(credits) - int(debits)
+    return Balance(
+        debits=int(debits),
+        credits=int(credits),
+        balance=signed,
+        normal_side=normal,
+    )
