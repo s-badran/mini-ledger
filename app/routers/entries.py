@@ -14,8 +14,10 @@ router = APIRouter(prefix="/entries", tags=["entries"])
 SessionDep = Annotated[Session, Depends(get_session)]
 
 # 255 matches the column width; anything longer would be a client bug worth
-# rejecting rather than quietly truncating.
-IdempotencyKey = Annotated[str | None, Header(alias="Idempotency-Key", max_length=255)]
+# rejecting rather than quietly truncating. Empty is a bug too.
+IdempotencyKey = Annotated[
+    str | None, Header(alias="Idempotency-Key", min_length=1, max_length=255)
+]
 
 
 @router.post("", response_model=EntryRead, status_code=status.HTTP_201_CREATED)
