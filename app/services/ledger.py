@@ -79,14 +79,14 @@ def post_entry(
     if debits != credits:
         raise UnbalancedEntry(debits, credits)
 
-    fingerprint = _fingerprint(payload) if idempotency_key is not None else None
+    fingerprint = _fingerprint(payload)
 
     if idempotency_key is not None:
         # Cheap path first, no locks: most retries arrive long after the
         # original request committed.
         existing = _find_by_key(session, idempotency_key)
         if existing is not None:
-            return _replay(existing, fingerprint or "", idempotency_key)
+            return _replay(existing, fingerprint, idempotency_key)
 
     # Lock every account the entry touches before writing anything, always in
     # id order. Two postings that hit the same pair of accounts in opposite
@@ -103,7 +103,7 @@ def post_entry(
     entry = JournalEntry(
         description=payload.description,
         idempotency_key=idempotency_key,
-        request_fingerprint=fingerprint,
+        request_fingerprint=fingerprint if idempotency_key is not None else None,
     )
     entry.lines = [
         JournalLine(
@@ -128,7 +128,7 @@ def post_entry(
         existing = _find_by_key(session, idempotency_key)
         if existing is None:
             raise
-        return _replay(existing, fingerprint or "", idempotency_key)
+        return _replay(existing, fingerprint, idempotency_key)
 
     session.refresh(entry)
     session.commit()

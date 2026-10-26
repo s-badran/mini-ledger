@@ -84,7 +84,7 @@ removes the possibility instead of lowering the odds.
 Needs Docker and Python 3.12.
 
 ```bash
-git clone <REPO_URL> mini-ledger
+git clone https://github.com/s-badran/mini-ledger.git
 cd mini-ledger
 
 docker compose up -d db
