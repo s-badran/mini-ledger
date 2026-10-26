@@ -166,7 +166,7 @@ HTTP/1.1 409 Conflict
 {"detail": "idempotency key 'invoice-2026-031' was already used for a different payload"}
 ```
 
-Pay rent, then read both balances:
+Pay rent, then read the cash balance:
 
 ```bash
 curl -s -X POST $BASE/entries -H 'Content-Type: application/json' \

@@ -35,6 +35,12 @@ def test_balances_match_hand_computed_fixtures(client: TestClient, chart: dict[s
     rent = get_balance(client, chart["5000"])
     assert rent["balance"] == 50_000
 
+    equity = get_balance(client, chart["3000"])
+    assert (equity["debits"], equity["credits"], equity["balance"]) == (0, 500_000, 500_000)
+
+    payable = get_balance(client, chart["2000"])
+    assert (payable["debits"], payable["credits"], payable["balance"]) == (0, 10_000, 10_000)
+
     # Everything above is one closed system: debits and credits have to agree.
     total_debits = sum(get_balance(client, account)["debits"] for account in chart.values())
     total_credits = sum(get_balance(client, account)["credits"] for account in chart.values())
