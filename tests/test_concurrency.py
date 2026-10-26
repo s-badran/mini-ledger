@@ -72,12 +72,15 @@ def test_opposite_line_order_does_not_deadlock(
         )
 
     assert db_session.scalar(select(func.count()).select_from(JournalEntry)) == rounds * 2
-    net = db_session.scalar(
-        select(func.sum(JournalLine.amount)).where(
-            JournalLine.account_id == chart["1000"], JournalLine.side == Side.debit
+    per_side = {
+        side: db_session.scalar(
+            select(func.sum(JournalLine.amount)).where(
+                JournalLine.account_id == chart["1000"], JournalLine.side == side
+            )
         )
-    )
-    assert net == rounds * 1_000
+        for side in (Side.debit, Side.credit)
+    }
+    assert per_side == {Side.debit: rounds * 1_000, Side.credit: rounds * 1_000}
 
 
 def test_parallel_postings_to_one_account_all_land(

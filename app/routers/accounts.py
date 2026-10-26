@@ -29,7 +29,6 @@ def create_account(payload: AccountCreate, session: SessionDep) -> Account:
             status_code=status.HTTP_409_CONFLICT,
             detail=f"account code {payload.code!r} is already in use",
         ) from None
-    session.refresh(account)
     return account
 
 
