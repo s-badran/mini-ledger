@@ -103,6 +103,16 @@ if you prefer your own server; `app/config.py` is the only place that reads it.
 
 Two migrations: the initial schema, then the idempotency index.
 
+### In a dev container
+
+`.devcontainer/` stacks a Python 3.12 container on top of the same Postgres
+service, with `LEDGER_DATABASE_URL` pointing at `db:5432` instead of the
+published host port. Pick "Reopen in Container" and the post-create step installs
+the dev dependencies; `alembic upgrade head` and `pytest` then behave as they do
+on the host. The Docker view in VS Code still lists every container on the
+machine, so this buys a consistent workspace and a stable project name, not a
+security boundary.
+
 ## API walkthrough
 
 Examples use `jq` to pull ids out of responses.

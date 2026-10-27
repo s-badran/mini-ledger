@@ -1,3 +1,7 @@
+# The project name groups the containers, network and volume in `docker ps`,
+# the Dev Container, and `docker compose -p` commands. Keep it stable.
+name: mini-ledger
+
 services:
   db:
     image: postgres:16-alpine
