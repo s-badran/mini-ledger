@@ -5,7 +5,7 @@ description = "A small double-entry ledger API."
 readme = "README.md"
 requires-python = "==3.12.*"
 license = { text = "MIT" }
-authors = [{ name = "<AUTHOR> <EMAIL>" }]
+authors = [{ name = "Saeed Badran", email = "salouri@gmail.com" }]
 dependencies = [
     "alembic==1.20.1",
     "fastapi==0.162.0",
