@@ -38,14 +38,14 @@ def post(
         return ledger.post_entry(session, payload, key)
 
 
-def payload_for(chart: dict[str, str], *lines: tuple[str, str, int]) -> EntryCreate:
+def payload_for(*lines: tuple[str, str, int]) -> EntryCreate:
     return EntryCreate.model_validate(entry_body(*lines))
 
 
 def test_same_key_in_flight_creates_one_entry(
     session_factory: sessionmaker[Session], chart: dict[str, str]
 ) -> None:
-    payload = payload_for(chart, (chart["1000"], "debit", 7_500), (chart["4000"], "credit", 7_500))
+    payload = payload_for((chart["1000"], "debit", 7_500), (chart["4000"], "credit", 7_500))
 
     results = run_together(8, lambda _: post(session_factory, payload, "race-key"))
 
@@ -58,12 +58,8 @@ def test_same_key_in_flight_creates_one_entry(
 def test_opposite_line_order_does_not_deadlock(
     session_factory: sessionmaker[Session], chart: dict[str, str], db_session: Session
 ) -> None:
-    debit_cash = payload_for(
-        chart, (chart["1000"], "debit", 1_000), (chart["4000"], "credit", 1_000)
-    )
-    credit_cash = payload_for(
-        chart, (chart["4000"], "debit", 1_000), (chart["1000"], "credit", 1_000)
-    )
+    debit_cash = payload_for((chart["1000"], "debit", 1_000), (chart["4000"], "credit", 1_000))
+    credit_cash = payload_for((chart["4000"], "debit", 1_000), (chart["1000"], "credit", 1_000))
 
     rounds = 10
     for _ in range(rounds):
@@ -87,9 +83,7 @@ def test_parallel_postings_to_one_account_all_land(
     session_factory: sessionmaker[Session], chart: dict[str, str], db_session: Session
 ) -> None:
     amount = 250
-    payload = payload_for(
-        chart, (chart["1000"], "debit", amount), (chart["4000"], "credit", amount)
-    )
+    payload = payload_for((chart["1000"], "debit", amount), (chart["4000"], "credit", amount))
     workers = 12
 
     results = run_together(workers, lambda _: post(session_factory, payload))
